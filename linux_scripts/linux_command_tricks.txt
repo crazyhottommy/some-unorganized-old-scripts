@@ -1,0 +1,192 @@
+http://stackoverflow.com/questions/984986/padding-empty-field-in-unix-join-operation
+I have two files where I want to perform union operation based on 1st column:
+
+file1.txt
+
+foo 1
+bar 2
+qux 3
+file2.txt
+
+foo x
+qux y
+boo z
+The result I hope to get is like this:
+
+foo  1 x
+bar  2 -
+qux  3 y
+boo  - z
+where the empty fields of column 1 is padded with "-".
+
+But why this join command doesn't work as I expected?
+$ join -a1 -a2 -e"-" file1.txt file2.txt
+What's the right way to do it?
+
+answer:
+
+"Important: FILE1 and FILE2 must be sorted on the join fields." (from this online manpage).
+
+This problem #1. Problem #2 is worse: option -e is badly documented -- only works in conjunction with -o, so for example:
+
+$ join -a 1 -a 2 -e'-' -o '0,1.2,2.2' sfile1.txt sfile2.txt
+bar 2 -
+boo - z
+foo 1 x
+qux 3 y
+where the s prefix name indicated files that I've sorted beforehand.
+
+Edit: man join explains the -o switch (so does the online manpage I point to above). It specifies the fields to output (1.2 means 2nd field from file 1, &c), or 0 to mean the join field, and is a comma-separated list. (I didn't remember the 0 value, actually, so had originally given a clumsier solution requiring awk post-processing, but the current solution is better... and no awk needed!).
+
+---------------------------------------------------------------------------------------------------------
+
+http://how-to.linuxcareer.com/learning-linux-commands-join
+
+you should specify -t $'\t' for the tab character, not just -t \t. Bash does not interpret \t unless in $'' quotes.
+
+
+-------------------------------------------------------------------------------------------------------------------
+wildcards in ls command
+To find all figures files in a current folder:
+
+ls *{png,jpeg,jpg,gif,bmp,tiff,tif}
+
+To find all bigWig files for factor CTCF and P300 in current folder
+
+ls *{CTCF, P300}*.bigWig
+----------------------------------------------------------------------------------------------------
+SED - display text on specific line of text file
+# print line number 52
+sed -n '52p' # method 1
+sed '52!d' # method 2
+sed '52q;d' # method 3, efficient on large files 
+
+
+sed -n '52,60 p' file # display line from 52 to 60
+
+more +4 file # display line from 4 to the end
+
+----------------------------------------------------
+AWK learning note
+1. first update the internal variables when reading one line:
+當 AWK 從資料檔中讀取一筆資料列時, AWK 會使用內建變數$0 予以記錄.
+AWK 會立刻重新分析 $0 的欄位情況, 並將 $0 上各欄位的資料用 $1, $2, ..予以記錄.
+
+例如 : AWK 從資料檔 emp.dat 中讀入第一筆資料列
+"A125 Jenny 100 210" 之後, 程式中:
+$0 之值將是 "A125 Jenny 100 210"
+$1 之值為 "A125" $2 之值為 "Jenny"
+$3 之值為 100 $4 之值為 210
+NF 之值為 4 $NF 之值為 210
+NR 之值為 1 FILENAME 之值為 ``emp.dat''
+where NF: Number of Fields in current $0
+NR: Number of Records of currently having been read.
+FILENAMEAWK: filename of current proceeding
+
+2. 'PATTERN{ACTION}' or -f script.awk
+the following two ways are same:
+
+$awk -f pay1.awk emp.dat
+$awk ' { print $2, $3 * $4 } ' emp.dat
+
+if you save the script into a file named pay1.awk.
+讀者可使用``-f''參數,讓AWK主程式使用其它僅含 AWK函數 的
+檔案中的函數
+其語法如下:
+awk -f AWK主程式檔名 -f AWK函數檔名 資料檔檔名
+3. BEGIN/END and array in AWK
+for example, we have a data file like:
+Mary O.S. Arch. Discrete
+Steve D.S. Algorithm Arch.
+Wang Discrete Graphics O.S.
+Lisa Graphics A.I. Lily Discrete Algorithm
+---------------------------------------
+{for( i=2; i<>
+END{
+for(coursein Number)
+printf("\%-10s %d\n", course, Number[course] )
+}
+---------------------------------------
+comment:
+a. NF=4 in this case, line number
+b. END is a AWK之保留字, 為{ Pattern}之一種, like BEGIN. The only difference is END only run after all lines are proceeded, while BEGIN works initially before the script, and only one time (both BEGIN and END).
+c. $i represents the ith elements in the line array, which is different from Perl program (in which, the $i is a variable name, in AWK, variable name cannot begin with $.)
+
+4. Shell command and awk command
+for example:
+---------------------------------------
+BEGIN { 
+while ( "who" | getline ) n++ 
+print n 
+}
+---------------------------------------
+where the who is a system command used in shell, and the getline is an awk command for input;
+
+5. Filename in the script should be quoted by "", 
+for example,
+---------------------------------------
+BEGIN { 
+print `` ID Number Arrival Time'' > ``today_rpt1''
+print ``==========================='' > ``today_rpt1''
+} 
+
+{ printf(" %s %s\n", $1,$2 ) > "today_rpt1" } 
+---------------------------------------
+$awk -f reformat1.awk arr.dat
+
+Note:
+a. if today_rpt1 is not quoted by "", then it will be taken as a variable (which default value is 0, or Null String in AWK.)
+b. the redirection mark is '>', not '>>‘, even you want to append to the end of the file. The only difference between them is, for '>>', it will append to the end of the file if it's open first time and the file exists. For '>', AWK will create a new file when it occurs first time, then append to the end (like '>>'). This is little bit different from Unix.
+
+6. Input and output command in Awk
+AWK input command: getline
+AWK output command: print, printf
+
+7. three ways to run awk
+a. $awk '{print}' file1.txt file2.txt
+b. $awk -f myscript.awk file1.txt file2.txt
+save {print} into a file(myscript.awk) first
+c. $myshell file1.txt file2.txt
+save awk '{print}' $* into a shell file(named myshell. Here $* means all parameters after the shell command. You also can use $1 represents the first parameter, and $2 the second one.
+
+8. FS(Field Separator) and RS(Record Separator)
+By default, the FS is any empty character (space, \t, ), RS is newline '\n'. But they can be changed, like
+
+--------------------------------------- make_report.awk -------------------------
+BEGIN {
+FS = "\n"
+RS = ""
+split( "一. 二. 三. 四. 五. 六. 七. 八. 九.", C_Number, " " )
+}
+{
+printf("\n%s 報告人 : %s \n",C_Number[NR],$1)
+for( i=2; i<= NF; i++)
+printf(" %d. %s\n", i-1, $i)
+}
+----------------------------------------------------------------------------------
+
+to show multi line around grep result
+You can grep multiple lines before or after matching the keywords. Here is a simple tips, that what I discover grep capable of. A is after, B is before.
+
+For example, test.data is like this:
+
+ENSG00000007372 ENSG00000109911 ENSG00000121690
+ENSG00000007372 ENSG00000149100 ENSG00000170959
+ENSG00000043355 ENSG00000175198 ENSG00000102452
+ENSG00000172845 ENSG00000115840 ENSG00000091428
+ENSG00000172845 ENSG00000138430 ENSG00000128708
+ENSG00000103449 ENSG00000103494 ENSG00000121274
+ENSG00000104313 ENSG00000182674 ENSG00000140396
+ENSG00000117707 ENSG00000136643 ENSG00000143499
+ENSG00000121297 ENSG00000105176 ENSG00000178904
+
+>grep ENSG00000138430  test.data 
+ENSG00000172845 ENSG00000138430 ENSG00000128708
+
+while,
+>grep ENSG00000138430  test.data -B1 -A3
+ENSG00000172845 ENSG00000115840 ENSG00000091428
+ENSG00000172845 ENSG00000138430 ENSG00000128708
+ENSG00000103449 ENSG00000103494 ENSG00000121274
+ENSG00000104313 ENSG00000182674 ENSG00000140396
+ENSG00000117707 ENSG00000136643 ENSG00000143499
