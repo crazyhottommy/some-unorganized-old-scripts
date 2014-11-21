@@ -204,7 +204,7 @@ heatmap.2(m, col=hmcols,trace="none",Colv=T,density.info="none", labRow=NA, scal
 # let's try dist but using the method single
 heatmap.2(m, col=hmcols, scale="row", hclust=function(x) hclust(x, method='single'), distfun=function(x) as.dist(1-cor(t(x))), trace="none",margin=c(17,15), density.info="none", labRow=NA)
 
-# this is usually the best way to cluster using person correlation distance
+# usually the best way to cluster using person correlation distance https://www.biostars.org/p/14156/
 # let's try to compute the pearson distances instead
 # do something like this http://stackoverflow.com/questions/6719747/heatmap-of-microarray-data-using-pearson-distance
 # both row and colum are clustered by pearson distance
