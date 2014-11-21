@@ -11,7 +11,7 @@
 # watch youtube here https://www.youtube.com/watch?v=PArRvqLUP6o
 # and here https://www.youtube.com/watch?v=wQhVWUcXM0A
 # https://www.youtube.com/watch?v=nIsLDtXlalo
-=======
+
 # https://www.youtube.com/watch?v=nIsLDtXlalo
 # understand what is k-means clustering and hierarchical clustering
 
@@ -24,8 +24,7 @@ rm(list=ls()) # drop all the variables
 
 d<- read.table("heatmaps.txt", header=T) # read the table into a dataframe 
 head(d)
-d$HIF1<- log2((d$HIF1+1)*1000000/4546673) # normalize and log transform the data
-=======
+
 d$HIF1<- log2((d$HIF1+1)*1000000/4546673) # normalize to the library size (samtools) and log transform the data
 d$Jund<- log2((d$Jund+1)*1000000/13689672)
 d$Cmyc<- log2((d$Cmyc+1)*1000000/46578824)
