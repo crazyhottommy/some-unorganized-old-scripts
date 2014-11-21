@@ -159,3 +159,95 @@ with(subset(res, padj <.05 & abs(log2FoldChange)>1), points(log2FoldChange, -log
 
 library(calibrate)
 with(subset(res, padj<.05 & abs(log2FoldChange)> 4), textxy(log2FoldChange, -log10(pval), labs=id, cex=.8))
+
+
+#### heatmap for log2fold change ######
+res1 <- nbinomTest( cds, 'GIE', 'GATA1' )
+res2 <- nbinomTest( cds, 'GIE', '2RA' )
+res3 <- nbinomTest( cds, 'GIE', 'V205M' )
+
+df<- data.frame(id=res1$id, logFC1=res1$log2FoldChange,padj1=res1$padj,
+                logFC2=res2$log2FoldChange, padj2=res2$padj,logFC3=res3$log2FoldChange, padj3=res3$padj)
+
+
+df<- df[abs(df$logFC1)>1 & abs(df$logFC2)>1,]
+
+df <- na.omit(df)
+
+View(df)
+
+m<- as.matrix(df[,c(2,4,6)])
+m<- m[!rowSums(!is.finite(m)),]
+colnames(m)<- c("GATA1_VS_G1E","2RA_VS_G1E","V205M_VS_G1E")
+head(m)
+
+# try different color schemes http://seqanswers.com/forums/showthread.php?t=12022
+library(RColorBrewer)
+hmcols<- colorRampPalette(c("green","green4","red","red4"))(256)
+hmcols<- colorRampPalette(c("white","red","yellow"))(256)
+hmcols<- colorRampPalette(c("white","green","green4","violet","purple"))(100)
+hmcols<-colorRampPalette(c("red","green","blue"))(256)
+
+# set scale='row'  get a standardized z-score to remove the mean gene expression 
+# https://www.biostars.org/p/15285/
+heatmap.2(m, col=hmcols,trace="none",Colv=T,density.info="none", labRow=NA, scale="row", margin=c(17,15))
+
+# the default is scaled with row which means for each gene, it scaled in this three different groups.
+# One subtle point in the previous examples is that the heatmap function has automatically scaled the 
+#colours for each row (i.e. each gene has been individually normalised across patients). This can be 
+# disabled using scale="none", which you might want to do if you have already done your own normalisation
+# (or this may not be appropriate for your data) http://www2.warwick.ac.uk/fac/sci/moac/people/students/peter_cock/r/heatmap/
+
+# the defaut distance calculating method in hclust is Euclidian, but it is problemetic. genes are upregulated
+# did not cluster together. see a post here https://www.biostars.org/p/91978/ and 
+# here http://liorpachter.wordpress.com/2014/01/19/why-do-you-look-at-the-speck-in-your-sisters-quilt-plot-and-pay-no-attention-to-the-plank-in-your-own-heat-map/
+# let's try dist but using the method single
+heatmap.2(m, col=hmcols, scale="row", hclust=function(x) hclust(x, method='single'), distfun=function(x) as.dist(1-cor(t(x))), trace="none",margin=c(17,15), density.info="none", labRow=NA)
+
+# this is usually the best way to cluster using person correlation distance
+# let's try to compute the pearson distances instead
+# do something like this http://stackoverflow.com/questions/6719747/heatmap-of-microarray-data-using-pearson-distance
+# both row and colum are clustered by pearson distance
+heatmap.2(m, col=hmcols, scale="row", hclust=function(x) hclust(x, method='complete'), distfun=function(x) as.dist(1-cor(t(x))), trace="none",margin=c(17,15), density.info="none", labRow=NA)
+
+hm<- heatmap.2(m, col=hmcols, hclust=function(x) hclust(x, method='complete'), distfun=function(x) as.dist(1-cor(t(x))), trace="none",margin=c(17,15), scale='row', density.info="none", labRow=NA)
+
+# to get the the matrix after clustering
+
+names(hm)
+# return the maxtrix returned after clustering as in the heatmap
+m.afterclust<- m[rev(hm$rowInd),rev(hm$colInd)]
+
+# to extract subgroups that are clustered together
+# rowDendrogram is a list object 
+# convert the rowDendrogram to a hclust object
+hc<- as.hclust(hm$rowDendrogram)
+
+names(hc)
+plot(hc)  # rotate the dendrogram 90 degree, it is the same as in the heatmap
+rect.hclust(hc,h=0.5) # based on the height of the tree, you can specify h
+
+ct<- cutree(hc,h=0.5)
+
+# get the members of each subgroup in the order of the cluster(left--->right), the row order will
+# it is reversed compared to the heatmap.
+table(ct)
+ct[hc$order]
+
+
+# get the matrix after clustering in the order of the heatmap (up--->down)
+
+tableclustn<-  data.frame(m.afterclust, rev(ct[hc$order]))
+head(tableclustn)
+write.table(tableclustn, file="tableclustn.xls", row.names=T, sep="\t")
+
+# remake the heatmap adding the RowSide bar based on the subgroups
+
+png("Rheatmap2.png", width=400, height=800)
+mycolhc<- sample(rainbow(256))
+mycolhc<-mycolhc[as.vector(ct)]
+rowDend<- as.dendrogram(hc)
+
+heatmap.2(m, col=hmcols, RowSideColors=mycolhc,hclust=function(x) hclust(x, method='complete'), distfun=function(x) as.dist(1-cor(t(x))), trace="none",margin=c(20,15), scale='row', density.info="none", labRow=NA)
+
+dev.off()
